@@ -5,7 +5,9 @@ import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { World } from './world.js';
+import { loadTextures } from './textures.js';
 import { Player } from './player.js';
 import { WeaponSystem } from './weapons.js';
 import { BotManager } from './bots.js';
@@ -62,6 +64,7 @@ let composer = null;
 function buildComposer() {
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new SMAAPass(window.innerWidth, window.innerHeight));
   const ssao = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
   ssao.kernelRadius = 10;
   ssao.minDistance = 0.01;
@@ -73,7 +76,13 @@ function buildComposer() {
 }
 
 // ---------- modules ----------
+const loadStatus = document.getElementById('load-status');
+const textures = await loadTextures((d, n) => {
+  if (loadStatus) loadStatus.textContent = `Chargement des textures… ${d}/${n}`;
+});
+if (loadStatus) loadStatus.textContent = '';
 const world = new World(scene);
+world.setTextures(textures);
 world.build();
 const audio = new AudioEngine();
 const hud = new HUD();
@@ -81,6 +90,7 @@ const player = new Player(camera, world);
 const bots = new BotManager(scene, world);
 const fx = new FX(scene, world.textures.flash);
 const weapons = new WeaponSystem(camera, scene, world, player, bots, hud, audio, fx);
+await weapons.loadModels();
 const game = new Game({ hud, audio, weapons, player, bots, world });
 
 weapons.onKill = (bot, head, name) => game.onKill(bot, head, name);
