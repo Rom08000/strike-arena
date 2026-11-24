@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { WeaponSystem } from './weapons.js';
@@ -11,7 +17,7 @@ import { Game } from './game.js';
 // ---------- renderer ----------
 const app = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -27,6 +33,44 @@ scene.fog = new THREE.Fog(0xc4b896, 70, 260);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 500);
 scene.add(camera);
+
+// ---------- post-processing: SSAO + bloom + color grade ----------
+const GradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uVig: { value: 0.32 },
+    uSat: { value: 1.1 },
+    uContrast: { value: 1.06 },
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uVig, uSat, uContrast;
+    varying vec2 vUv;
+    void main(){
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      float l = dot(c, vec3(0.299, 0.587, 0.114));
+      c = mix(vec3(l), c, uSat);
+      c = (c - 0.5) * uContrast + 0.5;
+      vec2 d = vUv - 0.5;
+      c *= 1.0 - uVig * smoothstep(0.42, 0.95, length(d));
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+};
+
+let composer = null;
+function buildComposer() {
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const ssao = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+  ssao.kernelRadius = 10;
+  ssao.minDistance = 0.01;
+  ssao.maxDistance = 0.6;
+  composer.addPass(ssao);
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.55, 0.85));
+  composer.addPass(new ShaderPass(GradeShader));
+  composer.addPass(new OutputPass());
+}
 
 // ---------- modules ----------
 const world = new World(scene);
@@ -166,6 +210,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  if (composer) composer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // ---------- main loop ----------
@@ -226,8 +271,10 @@ function frame(now) {
     }
   }
 
-  renderer.render(scene, camera);
+  if (composer) composer.render();
+  else renderer.render(scene, camera);
 }
 
 player.update(0.016, { mouseDX: 0, mouseDY: 0 }, null);
+buildComposer();
 requestAnimationFrame(frame);
