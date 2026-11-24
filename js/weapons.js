@@ -1,25 +1,30 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export const DEFS = {
   p2000: {
     key: 'p2000', name: 'P2000', slot: 2, price: 0, auto: false, rpm: 352, dmg: 26, headMult: 4,
     mag: 20, reserveMax: 120, reloadTime: 2.2, spread: 0.009, moveSpread: 0.045, bloom: 0.006,
     recoil: [0.02, 0.009], snd: 'deagle', adsFov: 66, speedMul: 0.97, kick: 0.05, view: 'pistol',
+    model: 'assets/weapons/p2000.glb', modelLen: 0.34,
   },
   deagle: {
     key: 'deagle', name: 'Desert Eagle', slot: 2, price: 700, auto: false, rpm: 267, dmg: 54, headMult: 4,
     mag: 7, reserveMax: 35, reloadTime: 2.1, spread: 0.008, moveSpread: 0.055, bloom: 0.012,
     recoil: [0.03, 0.014], snd: 'deagle', adsFov: 62, speedMul: 0.95, kick: 0.09, view: 'deagle',
+    model: 'assets/weapons/deagle.glb', modelLen: 0.36,
   },
   ak: {
     key: 'ak', name: 'AK-47', slot: 1, price: 2700, auto: true, rpm: 600, dmg: 36, headMult: 4,
     mag: 30, reserveMax: 120, reloadTime: 2.45, spread: 0.0065, moveSpread: 0.026, bloom: 0.0038,
     recoil: [0.0165, 0.008], snd: 'ak', adsFov: 67, speedMul: 0.92, kick: 0.05, view: 'ak',
+    model: 'assets/weapons/ak47.glb', modelLen: 0.62,
   },
   awp: {
     key: 'awp', name: 'AWP', slot: 3, price: 4750, auto: false, rpm: 41, dmg: 115, headMult: 1,
     mag: 5, reserveMax: 30, reloadTime: 3.4, spread: 0.02, moveSpread: 0.09, bloom: 0.01,
     recoil: [0.085, 0.02], snd: 'awp', adsFov: 14, speedMul: 0.8, kick: 0.15, view: 'awp',
+    model: 'assets/weapons/awp.glb', modelLen: 0.9,
   },
 };
 
@@ -82,6 +87,69 @@ function buildViewmodel(view, flashTex) {
   return g;
 }
 
+function buildGLBViewmodel(gltf, def, flashTex) {
+  const root = new THREE.Group();
+  const inner = gltf.scene;
+  root.add(inner);
+  root.updateMatrixWorld(true);
+  let box = new THREE.Box3().setFromObject(inner);
+  let size = box.getSize(new THREE.Vector3());
+  if (size.x > size.z * 1.05) {
+    inner.rotation.y = -Math.PI / 2;
+    root.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(inner);
+    size = box.getSize(new THREE.Vector3());
+  }
+  const muzzleNode = inner.getObjectByName('Attach_Muzzle') || null;
+  if (muzzleNode) {
+    const mp = new THREE.Vector3();
+    muzzleNode.getWorldPosition(mp);
+    const c = box.getCenter(new THREE.Vector3());
+    if (mp.z > c.z) inner.rotation.y += Math.PI;
+  }
+  root.updateMatrixWorld(true);
+  box = new THREE.Box3().setFromObject(inner);
+  size = box.getSize(new THREE.Vector3());
+  const len = Math.max(size.z, 0.05);
+  inner.scale.setScalar(def.modelLen / len);
+  root.updateMatrixWorld(true);
+  box = new THREE.Box3().setFromObject(inner);
+  const c = box.getCenter(new THREE.Vector3());
+  inner.position.sub(c);
+  root.updateMatrixWorld(true);
+  inner.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = false;
+      o.frustumCulled = false;
+      if (o.material) {
+        o.material.roughness = Math.min(0.75, (o.material.roughness ?? 0.5) + 0.15);
+        o.material.metalness = 0.25;
+      }
+    }
+  });
+  let muzzle = muzzleNode;
+  if (!muzzle) {
+    box = new THREE.Box3().setFromObject(inner);
+    muzzle = new THREE.Object3D();
+    muzzle.position.set(0, box.getCenter(new THREE.Vector3()).y, box.min.z - 0.02);
+    inner.add(muzzle);
+  }
+  const flash = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: flashTex, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false,
+  }));
+  flash.position.set(0, 0, -0.05);
+  flash.scale.set(0.3, 0.3, 1);
+  flash.visible = false;
+  muzzle.add(flash);
+  const light = new THREE.PointLight(0xffaa44, 0, 9, 2);
+  muzzle.add(light);
+  root.userData.muzzle = muzzle;
+  root.userData.flash = flash;
+  root.userData.light = light;
+  return root;
+}
+
 export class WeaponSystem {
   constructor(camera, scene, world, player, bots, hud, audio, fx) {
     this.camera = camera;
@@ -113,9 +181,30 @@ export class WeaponSystem {
     return { def, mag: def.mag, reserve: def.reserveMax, cd: 0, reloading: false, reloadT: 0, switchT: 0, bloom: 0 };
   }
 
+  async loadModels() {
+    const gltfLoader = new GLTFLoader();
+    const jobs = [];
+    for (const key of Object.keys(DEFS)) {
+      const def = DEFS[key];
+      if (def.model && !def._gltf) {
+        jobs.push(
+          gltfLoader.loadAsync(def.model)
+            .then(g => { def._gltf = g; })
+            .catch(e => console.warn('model GLB fallback (procedural) for', def.model, e))
+        );
+      }
+    }
+    await Promise.all(jobs);
+    this._buildVM();
+  }
+
   _buildVM() {
     if (this.gunGroup) this.vmGroup.remove(this.gunGroup);
-    this.gunGroup = buildViewmodel(this.current.def.view, this.fx.flashTex);
+    const def = this.current.def;
+    this.gunGroup = def._gltf
+      ? buildGLBViewmodel(def._gltf, def, this.fx.flashTex)
+      : buildViewmodel(def.view, this.fx.flashTex);
+    this.gunGroup.rotation.y = 0.05;
     this.vmGroup.add(this.gunGroup);
     this.muzzle = this.gunGroup.userData.muzzle;
     this.flashSprite = this.gunGroup.userData.flash;

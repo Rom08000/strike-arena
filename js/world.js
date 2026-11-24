@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { makeTextures, makeSkyTexture, sized } from './textures.js';
+import { makeSkyTexture, sized } from './textures.js';
 
 export class World {
   constructor(scene) {
     this.scene = scene;
     this.group = new THREE.Group();
     scene.add(this.group);
-    this.textures = makeTextures();
+    this.textures = null;
     this.solids = [];      // meshes used for raycasts
     this.colliders = [];   // {min:Vector3, max:Vector3}
     this.minimapRects = [];
@@ -31,17 +31,24 @@ export class World {
     ];
   }
 
+  setTextures(t) { this.textures = t; }
+
   _mat(name, w, h) {
     const t = this.textures[name];
     const metal = name === 'metal' || name === 'barrel' || name === 'door' || name.startsWith('container');
-    return new THREE.MeshStandardMaterial({
+    const m = {
       map: sized(t.map, w, h),
       normalMap: sized(t.normal, w, h),
       roughnessMap: sized(t.rough, w, h),
-      metalness: metal ? 0.55 : 0.06,
       roughness: 1.0,
-      normalScale: new THREE.Vector2(1.25, 1.25),
-    });
+      metalness: 0.0,
+      normalScale: new THREE.Vector2(1.2, 1.2),
+    };
+    if (metal) {
+      m.metalness = 1.0;
+      m.metalnessMap = sized(t.metal, w, h);
+    }
+    return new THREE.MeshStandardMaterial(m);
   }
 
   _addCollider(min, max) {
@@ -122,6 +129,7 @@ export class World {
         roughnessMap: sized(sand.rough, 70, 70),
         roughness: 1.0,
         metalness: 0.0,
+        normalScale: new THREE.Vector2(1.5, 1.5),
       })
     );
     ground.rotation.x = -Math.PI / 2;
