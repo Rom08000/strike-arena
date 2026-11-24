@@ -48,6 +48,7 @@ export class World {
       m.metalness = 1.0;
       m.metalnessMap = sized(t.metal, w, h);
     }
+    m.envMapIntensity = 0.6;
     return new THREE.MeshStandardMaterial(m);
   }
 
@@ -105,6 +106,116 @@ export class World {
 
   palette(cx, cz, w = 2, d = 2) {
     this.box(cx, cz, w, d, 0.14, 'wood');
+  }
+
+  // ---------- détails de map ----------
+  trimZ(z, x1, x2, y, h = 0.35, name = 'plasterDark') {
+    this.box((x1 + x2) / 2, z, Math.abs(x2 - x1), 0.28, h, name);
+    this.group.children[this.group.children.length - 1].position.y = y;
+    this.colliders.pop();
+    this.minimapRects.pop();
+  }
+
+  trimX(x, z1, z2, y, h = 0.35, name = 'plasterDark') {
+    this.box(x, (z1 + z2) / 2, 0.28, Math.abs(z2 - z1), h, name);
+    this.group.children[this.group.children.length - 1].position.y = y;
+    this.colliders.pop();
+    this.minimapRects.pop();
+  }
+
+  pillar(x, z, h = 8) {
+    this.box(x, z, 0.7, 0.7, h, 'plasterDark');
+  }
+
+  pipeZ(x, y, z1, z2, r = 0.06) {
+    const len = Math.abs(z2 - z1);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 8), this._mat('metal', len, 0.3));
+    m.rotation.x = Math.PI / 2;
+    m.position.set(x, y, (z1 + z2) / 2);
+    m.castShadow = true;
+    this.group.add(m);
+  }
+
+  pipeX(z, y, x1, x2, r = 0.06) {
+    const len = Math.abs(x2 - x1);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 8), this._mat('metal', len, 0.3));
+    m.rotation.z = Math.PI / 2;
+    m.position.set((x1 + x2) / 2, y, z);
+    m.castShadow = true;
+    this.group.add(m);
+  }
+
+  lamp(x, z, h = 3.4) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, h, 8), this._mat('metal', 0.4, h));
+    pole.position.set(x, h / 2, z);
+    pole.castShadow = true;
+    this.group.add(pole);
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.15, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0xfff2cc, emissive: 0xffd9a0, emissiveIntensity: 2.4 })
+    );
+    head.position.set(x, h + 0.12, z);
+    this.group.add(head);
+    const light = new THREE.PointLight(0xffd9a0, 16, 24, 1.8);
+    light.position.set(x, h, z);
+    this.group.add(light);
+    this._addCollider(new THREE.Vector3(x - 0.12, 0, z - 0.12), new THREE.Vector3(x + 0.12, h, z + 0.12));
+  }
+
+  decal(x, z, w, d, rot = 0, op = 0.65) {
+    if (!this.decalTex) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 256, 256);
+      for (let i = 0; i < 16; i++) {
+        const px = Math.random() * 256, py = Math.random() * 256, r = 12 + Math.random() * 46;
+        const g = ctx.createRadialGradient(px, py, 2, px, py, r);
+        g.addColorStop(0, 'rgba(28,22,15,0.5)');
+        g.addColorStop(1, 'rgba(28,22,15,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 256, 256);
+      }
+      this.decalTex = new THREE.CanvasTexture(c);
+    }
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshBasicMaterial({ map: this.decalTex, transparent: true, opacity: op, depthWrite: false })
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.rotation.z = rot;
+    m.position.set(x, 0.02, z);
+    this.group.add(m);
+  }
+
+  rock(x, z, s) {
+    const m = new THREE.Mesh(
+      new THREE.IcosahedronGeometry(s, 1),
+      new THREE.MeshStandardMaterial({ color: 0x9a8f78, roughness: 1, metalness: 0, flatShading: true, envMapIntensity: 0.4 })
+    );
+    m.position.set(x, s * 0.55, z);
+    m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+    m.castShadow = true; m.receiveShadow = true;
+    this.group.add(m);
+    this.solids.push(m);
+    this._addCollider(new THREE.Vector3(x - s * 0.7, 0, z - s * 0.7), new THREE.Vector3(x + s * 0.7, s * 1.1, z + s * 0.7));
+  }
+
+  doorFrameX(x, z1, z2) {
+    const w = Math.abs(z2 - z1);
+    this.box(x, z1 - 0.2, 0.5, 0.5, 3.2, 'metal');
+    this.box(x, z2 + 0.2, 0.5, 0.5, 3.2, 'metal');
+    this.box(x, (z1 + z2) / 2, 0.5, w + 0.9, 0.5, 'metal');
+    this.group.children[this.group.children.length - 1].position.y = 3.2;
+    this.colliders.pop(); this.minimapRects.pop();
+  }
+
+  doorFrameZ(z, x1, x2) {
+    this.box(x1 - 0.2, z, 0.5, 0.5, 3.2, 'metal');
+    this.box(x2 + 0.2, z, 0.5, 0.5, 3.2, 'metal');
+    this.box((x1 + x2) / 2, z, Math.abs(x2 - x1) + 0.9, 0.5, 0.5, 'metal');
+    this.group.children[this.group.children.length - 1].position.y = 3.2;
+    this.colliders.pop(); this.minimapRects.pop();
   }
 
   container(cx, cz, w, d, h, name) {
@@ -219,10 +330,49 @@ export class World {
     this.container(-38, -46, 5, 2.5, 2.6, 'containerGreen');
     this.container(38, -46, 5, 2.5, 2.6, 'containerRed');
 
+    // ================= détails =================
+    // corniches + plinthes sur le périmètre et les murs principaux
+    for (const y of [0.28, 8.55]) {
+      this.trimZ(-50, -52, 52, y); this.trimZ(50, -52, 52, y);
+      this.trimX(-50, -52, 52, y); this.trimX(50, -52, 52, y);
+    }
+    this.trimZ(-40, -50, 50, 0.28); this.trimZ(-40, -50, 50, 7.7);
+    this.trimZ(-8, -40, 20, 0.28); this.trimX(-8, -40, 20, 7.7);
+    this.trimX(8, -40, 20, 7.7); this.trimZ(20, -26, 26, 4.7);
+    // piliers aux jonctions de murs
+    for (const [px, pz] of [[-8, -40], [8, -40], [-8, -34], [8, -34], [-8, -30], [8, -30], [-8, 20], [8, 20], [-26, -34], [26, -34], [-14, -40], [14, -40], [-26, 20], [26, 20], [-8, -20], [8, -20]])
+      this.pillar(px, pz);
+    // cadres de portes métalliques
+    this.doorFrameZ(-40, -4, 4);
+    this.doorFrameZ(-40, -40, -36);
+    this.doorFrameZ(-40, 36, 40);
+    this.doorFrameX(-8, -34, -30);
+    this.doorFrameX(8, -34, -30);
+    this.doorFrameZ(20, -26, -20);
+    this.doorFrameZ(20, 20, 26);
+    // tuyaux le long des corridors
+    this.pipeZ(-25.6, 2.4, -30, 18); this.pipeZ(-25.6, 2.7, -30, 18, 0.045);
+    this.pipeZ(25.6, 2.4, -30, 18); this.pipeX(-8.4 - 0.0, 2.6, -38, 18); this.pipeX(8.4, 2.6, -38, 18);
+    this.pipeZ(-40, 2.2, -46, -42);
+    // lampadaires (lumière chaude ponctuelle)
+    this.lamp(-4, -37); this.lamp(-6, -20); this.lamp(6, -20);
+    this.lamp(-17, -32.5); this.lamp(17, -32.5);
+    this.lamp(0, 30); this.lamp(0, -44);
+    // décals au sol (taches d'huile, traces)
+    this.decal(-14, 44, 5, 4, 0.4); this.decal(14, 44, 4, 5, 1.2);
+    this.decal(0, 6, 6, 5, 0.9, 0.5); this.decal(-6, 14, 4, 3, 2.1);
+    this.decal(-44, -34, 5, 4, 0.2); this.decal(46, -20, 4, 4, 1.8);
+    this.decal(0, 38, 7, 5, 0.5, 0.45); this.decal(-20, 10, 4, 4, 2.6);
+    this.decal(17, -8, 4, 3, 0.8); this.decal(0, -44, 4, 3, 1.5);
+    // rochers / gravats
+    this.rock(-48, 30, 0.5); this.rock(47, 34, 0.65); this.rock(-30, -44, 0.45);
+    this.rock(31, -45, 0.5); this.rock(-12, 24, 0.4); this.rock(11, 26, 0.35);
+    this.rock(-27, -8, 0.4); this.rock(27, 2, 0.45); this.rock(0, 12, 0.3);
+
     // ================= lighting =================
-    const hemi = new THREE.HemisphereLight(0xd6e6ff, 0x9a8a68, 0.75);
+    const hemi = new THREE.HemisphereLight(0xd6e6ff, 0x9a8a68, 0.45);
     this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xffe2b0, 2.2);
+    const sun = new THREE.DirectionalLight(0xffe2b0, 2.4);
     sun.position.set(55, 85, 25);
     sun.castShadow = true;
     sun.shadow.mapSize.set(4096, 4096);
