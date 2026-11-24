@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { World } from './world.js';
 import { loadTextures } from './textures.js';
 import { Player } from './player.js';
@@ -35,6 +36,15 @@ scene.fog = new THREE.Fog(0xc4b896, 70, 260);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 500);
 scene.add(camera);
+
+// image-based lighting (HDRI CC0) — rend les surfaces PBR photoréalistes
+const pmrem = new THREE.PMREMGenerator(renderer);
+try {
+  const hdr = await new RGBELoader().loadAsync('assets/hdri/quarry_1k.hdr');
+  scene.environment = pmrem.fromEquirectangular(hdr).texture;
+} catch (e) {
+  console.warn('HDRI env indisponible, fallback lumière classique', e);
+}
 
 // ---------- post-processing: SSAO + bloom + color grade ----------
 const GradeShader = {

@@ -87,9 +87,9 @@ function buildViewmodel(view, flashTex) {
   return g;
 }
 
-function buildGLBViewmodel(gltf, def, flashTex) {
+// oriente un modèle d'arme : axe long -> Z, bouche vers -Z, échelle targetLen, centré sur l'origine
+export function prepareGunScene(inner, targetLen) {
   const root = new THREE.Group();
-  const inner = gltf.scene;
   root.add(inner);
   root.updateMatrixWorld(true);
   let box = new THREE.Box3().setFromObject(inner);
@@ -111,25 +111,32 @@ function buildGLBViewmodel(gltf, def, flashTex) {
   box = new THREE.Box3().setFromObject(inner);
   size = box.getSize(new THREE.Vector3());
   const len = Math.max(size.z, 0.05);
-  inner.scale.setScalar(def.modelLen / len);
+  inner.scale.setScalar(targetLen / len);
   root.updateMatrixWorld(true);
   box = new THREE.Box3().setFromObject(inner);
   const c = box.getCenter(new THREE.Vector3());
   inner.position.sub(c);
   root.updateMatrixWorld(true);
+  return { root, muzzleNode };
+}
+
+function buildGLBViewmodel(gltf, def, flashTex) {
+  const inner = gltf.scene;
+  const { root, muzzleNode } = prepareGunScene(inner, def.modelLen);
   inner.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = false;
       o.frustumCulled = false;
       if (o.material) {
-        o.material.roughness = Math.min(0.75, (o.material.roughness ?? 0.5) + 0.15);
-        o.material.metalness = 0.25;
+        o.material.metalness = 0.85;
+        o.material.roughness = 0.42;
+        o.material.envMapIntensity = 1.2;
       }
     }
   });
   let muzzle = muzzleNode;
   if (!muzzle) {
-    box = new THREE.Box3().setFromObject(inner);
+    const box = new THREE.Box3().setFromObject(inner);
     muzzle = new THREE.Object3D();
     muzzle.position.set(0, box.getCenter(new THREE.Vector3()).y, box.min.z - 0.02);
     inner.add(muzzle);

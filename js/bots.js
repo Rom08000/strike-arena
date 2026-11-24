@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { DEFS, prepareGunScene } from './weapons.js';
 
 const NAMES = ['Viper', 'Ghost', 'Reaper', 'Havoc', 'Spectre'];
 
@@ -9,11 +10,12 @@ function wrapAngle(a) {
 }
 
 export class Bot {
-  constructor(scene, world, name, route, spawn) {
+  constructor(scene, world, name, route, spawn, gunScene = null) {
     this.scene = scene;
     this.world = world;
     this.name = name;
     this.route = route;
+    this.gunScene = gunScene;
     this.pos = spawn.clone();
     this.vel = new THREE.Vector3();
     this.yaw = Math.PI;
@@ -58,7 +60,14 @@ export class Bot {
     add(new THREE.BoxGeometry(0.55, 0.62, 0.34), uniform, 0, 1.08, 0);
     add(new THREE.BoxGeometry(0.6, 0.5, 0.4), vest, 0, 1.12, 0);
     add(new THREE.BoxGeometry(0.5, 0.12, 0.12), uniform, 0.28, 1.32, -0.15);
-    this.gun = add(new THREE.BoxGeometry(0.07, 0.07, 0.65), gunM, 0.28, 1.36, -0.45);
+    if (this.gunScene) {
+      const { root } = prepareGunScene(this.gunScene.clone(true), 0.55);
+      root.position.set(0.28, 1.34, -0.5);
+      g.add(root);
+      this.gun = root;
+    } else {
+      this.gun = add(new THREE.BoxGeometry(0.07, 0.07, 0.65), gunM, 0.28, 1.36, -0.45);
+    }
     this.head = add(new THREE.BoxGeometry(0.28, 0.28, 0.28), skin, 0, 1.6, 0);
     add(new THREE.BoxGeometry(0.33, 0.15, 0.33), helm, 0, 1.72, 0);
 
@@ -250,8 +259,9 @@ export class BotManager {
   reset() {
     for (const b of this.bots) this.scene.remove(b.group);
     this.bots = [];
+    const gunScene = DEFS.ak._gltf ? DEFS.ak._gltf.scene : null;
     for (let i = 0; i < 5; i++) {
-      const b = new Bot(this.scene, this.world, NAMES[i], this.world.routes[i], this.world.spawnT[i]);
+      const b = new Bot(this.scene, this.world, NAMES[i], this.world.routes[i], this.world.spawnT[i], gunScene);
       b.wpIdx = (i * 2) % this.world.routes[i].length;
       this.bots.push(b);
     }

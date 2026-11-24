@@ -52,7 +52,8 @@ Puis cliquer sur **JOUER**.
   détection (champ de vision + ligne de vue), temps de réaction, rafales, strafing,
   précision dépendante de la distance et de votre mouvement, saut s'ils sont bloqués.
 - Map inspirée de Dust2 : spawn CT, mid avec portes, long A, tunnels B, sites A et B,
-  couvertures (caisses, conteneurs, palettes, murs bas, barils).
+  couvertures (caisses, conteneurs, palettes, murs bas, barils) + détails : corniches,
+  plinthes, piliers, cadres de portes métal, tuyaux, lampadaires éclairés, décals au sol, rochers.
 - Rendu moderne : textures procédurales 1024px (fBm déformé) avec **normal maps +
   roughness maps**, **SSAO + bloom + étalonnage colorimétrique** (post-processing),
   ombres 4096 PCFSoft, ciel en dégradé avec halo solaire, brouillard, tone mapping ACES.
@@ -81,4 +82,5 @@ js/fx.js            traceurs, particules, flashs
 js/textures.js      chargement textures PBR réelles (assets/) + fallback procédural
 assets/textures/    textures PBR CC0 ambientCG (color + normal + rma) — ATTRIBUTION.md
 assets/weapons/     modèles d'armes GLB CC0 (AK-47, AWP, Deagle, P2000) — ATTRIBUTION.md
+assets/hdri/        HDRI 1k CC0 (polyhaven "Quarry 01") pour l'éclairage d'environnement
 ```
