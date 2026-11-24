@@ -78,5 +78,7 @@ js/hud.js           HUD DOM + minimap
 js/game.js          rounds, économie, achats
 js/audio.js         synthèse sonore WebAudio
 js/fx.js            traceurs, particules, flashs
-js/textures.js      textures procédurales (canvas)
+js/textures.js      chargement textures PBR réelles (assets/) + fallback procédural
+assets/textures/    textures PBR CC0 ambientCG (color + normal + rma) — ATTRIBUTION.md
+assets/weapons/     modèles d'armes GLB CC0 (AK-47, AWP, Deagle, P2000) — ATTRIBUTION.md
 ```
