@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRIKE ARENA — FPS navigateur</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "./js/vendor/three.module.js",
+  "three/addons/": "./js/vendor/addons/"
+} }
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- ===================== HUD ===================== -->
+<div id="hud" class="hidden">
+  <div id="vignette"></div>
+  <div id="damage-overlay"></div>
+
+  <div id="crosshair" style="--gap: 6px">
+    <div class="ch-line ch-t"></div>
+    <div class="ch-line ch-b"></div>
+    <div class="ch-line ch-l"></div>
+    <div class="ch-line ch-r"></div>
+    <div class="ch-dot"></div>
+  </div>
+
+  <div id="hitmarker">
+    <span class="hm hm1"></span><span class="hm hm2"></span>
+    <span class="hm hm3"></span><span class="hm hm4"></span>
+  </div>
+
+  <div id="topbar">
+    <div id="score-ct" class="score ct">0</div>
+    <div id="round-box">
+      <div id="timer">1:55</div>
+      <div id="round-num">Round 1</div>
+    </div>
+    <div id="score-t" class="score t">0</div>
+  </div>
+
+  <div id="killfeed"></div>
+  <canvas id="minimap" width="190" height="190"></canvas>
+
+  <div id="bottom-left">
+    <div class="stat">
+      <span class="label">VIE</span>
+      <span id="hp" class="val">100</span>
+      <div class="bar"><div id="hp-bar" class="fill hp"></div></div>
+    </div>
+    <div class="stat">
+      <span class="label">ARMURE</span>
+      <span id="armor" class="val">0</span>
+      <div class="bar"><div id="armor-bar" class="fill armor"></div></div>
+    </div>
+  </div>
+
+  <div id="bottom-right">
+    <div id="weapon-name">P2000</div>
+    <div id="ammo"><span id="mag">20</span><span id="reserve">/ 120</span></div>
+    <div id="money">$800</div>
+  </div>
+
+  <div id="hint" class="hidden"></div>
+  <div id="dmg-indicators"></div>
+
+  <div id="scope" class="hidden"></div>
+
+  <div id="banner" class="hidden"><div id="banner-main"></div><div id="sub-banner"></div></div>
+</div>
+
+<!-- ===================== MENU ===================== -->
+<div id="menu" class="overlay">
+  <div class="panel">
+    <h1>STRIKE<span>ARENA</span></h1>
+    <p class="tag">FPS tactique compétitif — directement dans votre navigateur</p>
+    <button id="btn-play" class="big-btn">▶&nbsp; JOUER</button>
+    <div class="controls">
+      <div><b>ZQSD / WASD</b> se déplacer</div>
+      <div><b>Souris</b> viser</div>
+      <div><b>Clic gauche</b> tirer</div>
+      <div><b>Clic droit</b> visée / lunette (AWP)</div>
+      <div><b>R</b> recharger</div>
+      <div><b>1 / 2 / 3</b> changer d'arme</div>
+      <div><b>Maj</b> sprinter &nbsp; <b>Espace</b> sauter &nbsp; <b>C</b> s'accroupir</div>
+      <div><b>B</b> menu d'achat (phase d'achat)</div>
+      <div><b>Échap</b> pause</div>
+    </div>
+    <div class="settings">
+      <label>Sensibilité <input type="range" id="sens" min="0.2" max="3" step="0.05" value="1"></label>
+      <label>Volume <input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
+    </div>
+    <p class="tip">Objectif : 5 rounds gagnés. Éliminez les 5 ennemis à chaque round avant la fin du chrono.</p>
+  </div>
+</div>
+
+<!-- ===================== PAUSE ===================== -->
+<div id="pause" class="overlay hidden">
+  <div class="panel">
+    <h2>PAUSE</h2>
+    <button id="btn-resume" class="big-btn">REPRENDRE</button>
+    <button id="btn-quit" class="btn">MENU PRINCIPAL</button>
+    <div class="settings">
+      <label>Sensibilité <input type="range" id="sens2" min="0.2" max="3" step="0.05" value="1"></label>
+      <label>Volume <input type="range" id="vol2" min="0" max="1" step="0.05" value="0.8"></label>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ACHAT ===================== -->
+<div id="buy" class="overlay hidden">
+  <div class="panel wide">
+    <h2>PHASE D'ACHAT — <span id="buy-timer">20</span>s</h2>
+    <div id="buy-money">$800</div>
+    <div id="buy-items"></div>
+    <button id="btn-ready" class="big-btn">PRÊT — LANCER LE ROUND</button>
+    <p class="tip">Touches 1-5 ou clic pour acheter. Le round démarre quand le chrono atteint 0.</p>
+  </div>
+</div>
+
+<!-- ===================== GAME OVER ===================== -->
+<div id="gameover" class="overlay hidden">
+  <div class="panel">
+    <h2 id="go-title">VICTOIRE</h2>
+    <div id="go-score">5 — 0</div>
+    <button id="btn-restart" class="big-btn">REJOUER</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
