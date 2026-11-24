@@ -52,8 +52,10 @@ Puis cliquer sur **JOUER**.
   détection (champ de vision + ligne de vue), temps de réaction, rafales, strafing,
   précision dépendante de la distance et de votre mouvement, saut s'ils sont bloqués.
 - Map inspirée de Dust2 : spawn CT, mid avec portes, long A, tunnels B, sites A et B,
-  couvertures (caisses, murs bas, barils), textures procédurales (sable, plâtre, bois,
-  métal), ombres dynamiques, brouillard, tone mapping ACES.
+  couvertures (caisses, conteneurs, palettes, murs bas, barils).
+- Rendu moderne : textures procédurales 1024px (fBm déformé) avec **normal maps +
+  roughness maps**, **SSAO + bloom + étalonnage colorimétrique** (post-processing),
+  ombres 4096 PCFSoft, ciel en dégradé avec halo solaire, brouillard, tone mapping ACES.
 - HUD complet : crosshair dynamique, vie/armure, munitions, argent, chrono, score,
   killfeed, hitmarker (rouge sur headshot), indicateurs de dégâts directionnels,
   vignette de low-HP, **minimap radar**, écran de lunette AWP.
